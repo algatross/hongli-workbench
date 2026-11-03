@@ -1,0 +1,55 @@
+name: 收盘快照
+
+# 每个交易日收盘后抓一次池内全部标的的收盘价，追加到 历史收盘价.csv 并提交回仓库。
+# 顺带核对分红公告，有差异就写一份 分红差异-YYYYMMDD.txt（只记录，不自动改页面）。
+#
+# 注意：
+#   1. GitHub 的 cron 用 UTC。08:10 UTC = 北京 16:10，A 股 15:00 收盘、港股 16:00 收盘。
+#   2. 定时任务偶尔会延迟几分钟到几十分钟才触发，这是 GitHub 自己的调度策略，不是配置问题。
+#   3. 只在北京时间工作日跑；遇 A 股节假日脚本会自动跳过（行情时间不是当天就不写）。
+#   4. 仓库超过 60 天没有任何提交，GitHub 会自动停掉定时任务；本任务每天提交一次，
+#      正常情况下不会触发这条规则。
+
+on:
+  schedule:
+    - cron: "10 8 * * 1-5"
+  workflow_dispatch:      # 支持网页上手动点一下立即跑
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 拉取仓库
+        uses: actions/checkout@v4
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 抓收盘价 + 核对分红
+        env:
+          HL_ROOT: "."
+          TZ: "Asia/Shanghai"
+        run: python scripts/收盘快照.py
+
+      - name: 提交变更
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- 历史收盘价.csv 分红差异-*.txt 2>/dev/null || git add -A
+          if git diff --staged --quiet; then
+            echo "今天没有新数据（休市或数据未变），跳过提交"
+          else
+            git commit -m "data: 收盘快照 $(date -u +%Y-%m-%d)"
+            git push
+          fi

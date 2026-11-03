@@ -1,0 +1,8 @@
+# 统一用 LF 存进仓库，避免 Windows 本地和 GitHub Actions(Linux) 之间来回改
+* text=auto eol=lf
+
+# 二进制，别做任何换行转换
+*.png binary
+
+# CSV 由 Python csv 模块生成（固定 \r\n），交给 git 自动归一化即可
+*.csv text

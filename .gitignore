@@ -1,0 +1,10 @@
+# 忽略运行产物
+快照运行日志.txt
+*.tmp
+*.log
+__pycache__/
+
+# 系统垃圾
+.DS_Store
+Thumbs.db
+desktop.ini
