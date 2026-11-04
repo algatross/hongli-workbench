@@ -153,6 +153,83 @@ main{padding:12px 0 20px}
 }
 .gobtn:active{background:#123040}
 
+/* 布林轨道尺（卡片内联） */
+.bb{margin-top:11px;padding-top:9px;border-top:1px solid #19233A}
+.bb-hd{display:flex;align-items:baseline;gap:6px;margin-bottom:7px;flex-wrap:wrap}
+.bb-tag{font-size:10.5px;line-height:15px;padding:0 6px;border-radius:5px;border:1px solid var(--line);white-space:nowrap}
+.bb-dist{margin-left:auto;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums}
+.bb-dist b{font-weight:600}
+.bb-brk-lo{background:#04222B;color:#38DEE8;border-color:#124A55}
+.bb-lo{background:#08202A;color:#7FC8EE;border-color:#123F4A}
+.bb-dn{background:#0E1727;color:#8AA0BE;border-color:var(--line)}
+.bb-mid{background:#0E1727;color:var(--tx2);border-color:var(--line)}
+.bb-up{background:#0E1727;color:#8AA0BE;border-color:var(--line)}
+.bb-hi{background:#1E1805;color:#E5B94A;border-color:#4A3A08}
+.bb-brk-hi{background:#231A03;color:var(--gold);border-color:#5A4A10}
+.bb-flat{background:#141C2A;color:#6B7D99;border-color:#1A2439}
+.bb-track{
+  position:relative;height:6px;border-radius:3px;
+  background:linear-gradient(90deg,#1B6E7E 0%,rgba(34,211,238,.24) 26%,rgba(110,128,155,.22) 50%,rgba(251,191,36,.28) 74%,#7A5E12 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.bb-tk{position:absolute;top:-3px;width:1px;height:12px;background:rgba(255,255,255,.13)}
+.bb-tk.mid{background:rgba(255,255,255,.26)}
+.bb-pt{
+  position:absolute;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;
+  background:#F2F6FF;z-index:2;
+  box-shadow:0 0 0 2px #0A0F1A, 0 0 0 3px rgba(170,190,215,.32), 0 0 10px 2px rgba(200,220,245,.45);
+}
+.bb-pt.lo{
+  background:#38DEE8;
+  box-shadow:0 0 0 2px #0A0F1A, 0 0 0 3px rgba(34,211,238,.55), 0 0 11px 2px rgba(34,211,238,.7);
+}
+.bb-pt.hi{
+  background:#FBBF24;
+  box-shadow:0 0 0 2px #0A0F1A, 0 0 0 3px rgba(251,191,36,.55), 0 0 11px 2px rgba(251,191,36,.75);
+}
+.bb-ft{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px;margin-top:5px;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums}
+.bb-ft b{color:var(--tx2);font-weight:500}
+
+/* 筛选 chips */
+.chips{display:flex;gap:6px;margin:0 0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto;font-size:12px;padding:5px 11px;border-radius:8px;cursor:pointer;
+  background:#0E1727;border:1px solid var(--line);color:var(--tx2);white-space:nowrap;
+}
+.chip:active{transform:scale(.97)}
+.chip.on{background:#08202A;border-color:#123F4A;color:var(--acc)}
+.chip i{font-style:normal;color:var(--tx3);margin-left:4px;font-variant-numeric:tabular-nums}
+.chip.on i{color:#4E9CB8}
+
+/* 四象限交叉 */
+.quad{border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:9px;background:var(--panel)}
+.quad.q1{border-color:#12404F;background:linear-gradient(180deg,#07202A,#121A2B 72%)}
+.quad.q2{border-color:#4A3A08;background:linear-gradient(180deg,#1A1403,#121A2B 72%)}
+.quad.q3{border-color:#1E2A3F}
+.quad.q4{border-color:#1A2439;opacity:.75}
+.q-hd{display:flex;align-items:baseline;gap:7px;margin-bottom:8px}
+.q-hd b{font-size:13px;font-weight:600}
+.q-hd u{text-decoration:none;font-size:10.5px;color:var(--tx3);margin-left:auto}
+.quad.q1 .q-hd b{color:var(--acc)}
+.quad.q2 .q-hd b{color:var(--gold)}
+.q-ls{display:flex;flex-wrap:wrap;gap:6px}
+.q-i{
+  flex:0 0 auto;
+  font-size:11.5px;padding:4px 8px;border-radius:7px;line-height:1.45;
+  background:#0E1727;border:1px solid var(--line);color:var(--tx2);white-space:nowrap;
+}
+.q-i i{font-style:normal;color:var(--acc);font-variant-numeric:tabular-nums;margin-left:3px}
+.q-i em{font-style:normal;color:var(--tx3);font-variant-numeric:tabular-nums;margin-left:4px}
+.q-i em.lo{color:#5FC8DC}
+.q-i em.hi{color:#D3A93C}
+.q-none{font-size:11.5px;color:var(--tx3)}
+
+/* 矩阵页「布林」列配色：低位青、高位金、横盘灰 */
+td.blv-brk-lo,td.blv-lo{color:#5FC8DC}
+td.blv-brk-hi,td.blv-hi{color:#D3A93C}
+td.blv-flat{color:#6B7D99}
+
 /* 矩阵表 */
 .tbwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
 table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
@@ -232,6 +309,7 @@ nav.tabbar .ic{font-size:15px;line-height:1;font-variant-numeric:tabular-nums}
 
 <div class="banner hide" id="banner"></div>
 <div class="banner hide" id="banner2"></div>
+<div class="banner hide" id="banner3"></div>
 
 <main>
   <section class="view on" data-view="buy" id="v-buy"></section>
@@ -262,8 +340,18 @@ var TAX_NAME = { A:"A股·免税", HKH:"港通H·20%", HKNH:"港通非H·28%", H
 var TARGETS = [3,4,5,6,7,8,9];
 var LS_KEY = "divbuy_v1";
 /* 版本号：改了页面就改这两行，手机上用来判断有没有拿到新版（Pages 有缓存） */
-var APP_VER = "v1.6";
-var APP_BUILD = "2026-11-03";
+var APP_VER = "v1.7";
+var APP_BUILD = "2026-11-04";
+
+/* ============ 布林通道参数 ============ */
+var BOLL_P = 20;      /* 周期：20 日 */
+var BOLL_K = 2;       /* 倍数：±2σ */
+var BOLL_MIN_BW = 4;  /* 带宽 <4% 视为窄幅横盘，不给贴轨/突破信号（假信号太多） */
+var BOLL_LMT = 30;    /* 取多少根日 K，够算 20 日并留冗余 */
+var BOLL_NAME = {
+  "brk-lo":"跌破下轨", "lo":"贴下轨", "dn":"中轨下方", "mid":"中轨附近",
+  "up":"中轨上方", "hi":"贴上轨", "brk-hi":"突破上轨", "flat":"窄幅横盘"
+};
 
 /* ============ 种子股票池 ============ */
 /* dps = 每股分红（原币）。A股为人民币，港股为港元。
@@ -465,6 +553,9 @@ function buildState() {
     v:1, fx:0.92, alertYield:5, updatedAt:null,
     stocks:arr, prices:{}, holdings:{},
     indCur:"all",   /* 「行业」页当前选中的一级行业 key */
+    buyFilter:"all",/* 「买点」页布林筛选：all / lo / hi */
+    mtxMode:"matrix",/* 「矩阵」页视图：matrix / quad */
+    boll:{ key:"", ts:null, map:{} },  /* 布林通道缓存：{key:计算日, ts, map:{code:{lo,mid,up,n,d}}} */
     srcLog:{}   /* 各数据源最后一次运行记录：{quote:{ts,got,total}, div:{ts,changed,plans}} */
   };
 }
@@ -482,6 +573,10 @@ function loadState() {
     if (!o.holdings) o.holdings = {};
     if (!o.srcLog || typeof o.srcLog !== "object") o.srcLog = {};
     if (!o.indCur) o.indCur = "all";
+    if (!o.buyFilter) o.buyFilter = "all";
+    if (!o.mtxMode) o.mtxMode = "matrix";
+    if (!o.boll || typeof o.boll !== "object") o.boll = { key:"", ts:null, map:{} };
+    if (!o.boll.map || typeof o.boll.map !== "object") o.boll.map = {};
     return o;
   } catch (e) { return null; }
 }
@@ -627,6 +722,7 @@ function refreshAll() {
       renderAll();
       updateFresh();
       checkDividend(false);
+      fetchBoll(false);   /* 行情到位后再补布林，避免首屏被上百个请求拖住 */
       toast(got > 0 ? ("已更新 " + got + " 只行情") : "没抓到行情，请手动填价");
       return;
     }
@@ -655,6 +751,79 @@ function refreshAll() {
     });
   }
   nextChunk();
+}
+
+/* ============ 布林通道 BOLL(20,2) ============
+   口径：日线「前复权」收盘价、20 日周期、±2 倍「总体」标准差（与通达信 / 同花顺一致）。
+   三轨由「到计算日为止的最后 20 根收盘」算出，一天一算，缓存在 state.boll。
+   前复权是必须的：红利股除权日会跳空，不复权会造出「假跌破下轨」。 */
+
+function dayKey(d) {
+  d = d || new Date();
+  return "" + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+}
+
+/* 东财 secid：沪市 1. / 深市 0. / 港股 116. */
+function secidOf(s) {
+  if (s.market === "hk") return "116." + s.code;
+  return (s.market === "sh" ? "1." : "0.") + s.code;
+}
+
+/* 由收盘价序列算三轨，取最后 P 根；不足 P 根返回 null（新股不给编造） */
+function bollStat(closes) {
+  if (!closes || closes.length < BOLL_P) return null;
+  var arr = closes.slice(closes.length - BOLL_P);
+  var n = arr.length, i, sum = 0;
+  for (i = 0; i < n; i++) sum += arr[i];
+  var mid = sum / n, sq = 0;
+  for (i = 0; i < n; i++) sq += (arr[i] - mid) * (arr[i] - mid);
+  var sd = Math.sqrt(sq / n);   /* 总体标准差，不是样本标准差 */
+  return { mid:mid, up:mid + BOLL_K * sd, lo:mid - BOLL_K * sd, sd:sd };
+}
+
+/* 一只股票的布林位置 + 现价到三轨的距离 */
+function bollOf(s) {
+  var b = (state.boll && state.boll.map) ? state.boll.map[s.code] : null;
+  if (!b || !(b.up > b.lo)) return null;
+  var p = priceRaw(s);
+  if (p === null || p <= 0) return null;
+  var span = b.up - b.lo;
+  var pos = span > 0 ? (p - b.lo) / span * 100 : 50;
+  var bw = b.mid > 0 ? span / b.mid * 100 : 0;
+  var lv;
+  if (bw < BOLL_MIN_BW) lv = "flat";
+  else if (pos < 0)      lv = "brk-lo";
+  else if (pos < 15)     lv = "lo";
+  else if (pos < 40)     lv = "dn";
+  else if (pos <= 60)    lv = "mid";
+  else if (pos <= 85)    lv = "up";
+  else if (pos <= 100)   lv = "hi";
+  else                   lv = "brk-hi";
+  return {
+    lo:b.lo, mid:b.mid, up:b.up, pos:pos, bw:bw, lv:lv, d:b.d || "", n:b.n || 0,
+    dLo:(p / b.lo - 1) * 100, dMid:(p / b.mid - 1) * 100, dUp:(p / b.up - 1) * 100
+  };
+}
+
+/* 现价离哪根轨最近 —— 提醒里显示的就是这个距离 */
+function bollNear(bb) {
+  if (bb.lv === "brk-lo" || bb.lv === "lo") return { t:"下轨", v:bb.dLo };
+  if (bb.lv === "brk-hi" || bb.lv === "hi") return { t:"上轨", v:bb.dUp };
+  return { t:"中轨", v:bb.dMid };
+}
+
+/* 全池布林分布 */
+function bollCount() {
+  var c = { "brk-lo":0, lo:0, dn:0, mid:0, up:0, hi:0, "brk-hi":0, flat:0, none:0, n:0 };
+  for (var i = 0; i < state.stocks.length; i++) {
+    var bb = bollOf(state.stocks[i]);
+    if (!bb) { c.none++; continue; }
+    c[bb.lv]++;
+    c.n++;
+  }
+  c.tight = c["brk-lo"] + c.lo;    /* 贴下轨（含跌破） */
+  c.rich  = c["brk-hi"] + c.hi;    /* 贴上轨（含突破） */
+  return c;
 }
 
 /* ============ 通用：单只股票卡片 ============
@@ -711,6 +880,44 @@ function stockCardHTML(s, y, opt) {
     h += '<span class="pill">现价距本档 <b>' + ((p / buyPrice(s, tier) - 1) * 100).toFixed(1) + '%</b></span>';
   }
   h += '</div>';
+
+  /* ---- 布林轨道尺：位置条 + 三轨价 + 到最近轨的距离 ---- */
+  var bb = bollOf(s);
+  if (bb) {
+    var nr = bollNear(bb);
+    var pc = Math.max(0, Math.min(100, bb.pos));
+    var ptCls = (bb.lv === "brk-lo" || bb.lv === "lo") ? " lo"
+              : ((bb.lv === "brk-hi" || bb.lv === "hi") ? " hi" : "");
+    var nrC = nr.v < 0 ? "#F09595" : "var(--tx3)";
+    h += '<div class="bb">';
+    h += '<div class="bb-hd">';
+    h += '<span class="bb-tag bb-' + bb.lv + '">' + BOLL_NAME[bb.lv] + '</span>';
+    h += '<span class="bb-dist">距' + nr.t + ' <b style="color:' + nrC + '">'
+       + (nr.v > 0 ? "+" : "") + nr.v.toFixed(1) + '%</b>'
+       + '<span style="color:#3E4E66"> · </span>位置 ' + bb.pos.toFixed(0) + '%</span>';
+    h += '</div>';
+    h += '<div class="bb-track">';
+    h += '<span class="bb-tk" style="left:0"></span>'
+       + '<span class="bb-tk mid" style="left:50%"></span>'
+       + '<span class="bb-tk" style="left:100%"></span>';
+    h += '<span class="bb-pt' + ptCls + '" style="left:' + pc.toFixed(1) + '%"></span>';
+    h += '</div>';
+    h += '<div class="bb-ft">'
+       + '<span>下 <b>' + fmt(bb.lo, curDec(s)) + '</b></span>'
+       + '<span>中 <b>' + fmt(bb.mid, curDec(s)) + '</b></span>'
+       + '<span>上 <b>' + fmt(bb.up, curDec(s)) + '</b></span>'
+       + '<span style="color:#3E4E66">带宽 ' + bb.bw.toFixed(1) + '%</span>'
+       + '</div>';
+    h += '</div>';
+  } else if (state.boll && state.boll.key) {
+    /* 有布林缓存但这只没算出来：没价格、新股、停牌、或 K 线不足 20 日——如实标注不硬凑 */
+    var why = (priceRaw(s) === null) ? "待价格，刷新后显示轨道"
+                                    : ("K 线不足 " + BOLL_P + " 日或本次抓取失败");
+    h += '<div class="bb"><div class="bb-hd">'
+       + '<span class="bb-tag bb-flat">无布林数据</span>'
+       + '<span class="bb-dist">' + why + '</span></div></div>';
+  }
+
   h += '</div>';
   return h;
 }
@@ -732,18 +939,53 @@ function renderBuy() {
     if (rows[k].y >= state.alertYield) hot++;
   }
 
+  var bc = bollCount();
   var h = "";
-  h += '<div class="sect">按税后股息率排序 · 共 ' + state.stocks.length + ' 只'
-     + (hot ? ' · 其中 ' + hot + ' 只已达 ' + state.alertYield + '% 关注线' : '')
+
+  /* ---- 布林筛选条（有布林数据才出现）---- */
+  if (bc.n > 0) {
+    if (state.buyFilter !== "lo" && state.buyFilter !== "hi") state.buyFilter = "all";
+    h += '<div class="chips">';
+    h += '<span class="chip' + (state.buyFilter === "all" ? " on" : "") + '" data-bf="all">全部<i>' + state.stocks.length + '</i></span>';
+    h += '<span class="chip' + (state.buyFilter === "lo" ? " on" : "") + '" data-bf="lo">贴下轨<i>' + bc.tight + '</i></span>';
+    h += '<span class="chip' + (state.buyFilter === "hi" ? " on" : "") + '" data-bf="hi">贴上轨<i>' + bc.rich + '</i></span>';
+    h += '</div>';
+  }
+
+  var shown = rows, filtering = false;
+  if (state.buyFilter === "lo" || state.buyFilter === "hi") {
+    filtering = true;
+    shown = [];
+    for (var m = 0; m < rows.length; m++) {
+      var bb = bollOf(rows[m].s);
+      if (!bb) continue;
+      var isLo = (bb.lv === "brk-lo" || bb.lv === "lo");
+      var isHi = (bb.lv === "brk-hi" || bb.lv === "hi");
+      if (state.buyFilter === "lo" ? isLo : isHi) shown.push(rows[m]);
+    }
+  }
+
+  h += '<div class="sect">'
+     + (filtering
+        ? '布林' + (state.buyFilter === "lo" ? '贴下轨' : '贴上轨') + ' · 筛出 ' + shown.length + ' / ' + state.stocks.length + ' 只'
+        : '按税后股息率排序 · 共 ' + state.stocks.length + ' 只'
+          + (hot ? ' · 其中 ' + hot + ' 只已达 ' + state.alertYield + '% 关注线' : ''))
      + '</div>';
 
-  if (noPrice > 0) {
+  if (filtering && !shown.length) {
+    h += '<div class="empty">当前没有符合「' + (state.buyFilter === "lo" ? '贴下轨' : '贴上轨')
+       + '」的标的<br><span class="tiny">点上方「全部」回到完整列表</span></div>';
+    el.innerHTML = h;
+    return;
+  }
+
+  if (noPrice > 0 && !filtering) {
     h += '<div class="banner" style="margin:0 0 10px">有 ' + noPrice
        + ' 只还没有价格。点右上角「刷新行情」，或去「数据」页手动填现价。</div>';
   }
 
-  for (var j = 0; j < rows.length; j++) {
-    h += stockCardHTML(rows[j].s, rows[j].y, {});
+  for (var j = 0; j < shown.length; j++) {
+    h += stockCardHTML(shown[j].s, shown[j].y, {});
   }
   el.innerHTML = h;
 }
@@ -890,43 +1132,111 @@ function renderInd() {
 }
 
 /* ============ 渲染：矩阵 ============ */
+/* ============ 渲染：矩阵 ============ */
+/* 布林 × 股息率 四象限：单看布林只知道贵不贵，单看股息率只知道给多少，交叉才有意义 */
+function quadHTML() {
+  var q = [[], [], [], []], none = 0;
+  for (var i = 0; i < state.stocks.length; i++) {
+    var s = state.stocks[i];
+    var y = yieldNet(s);
+    var bb = bollOf(s);
+    if (!bb || y === null) { none++; continue; }
+    var low = bb.pos < 50;
+    var hot = y >= state.alertYield;
+    q[(low ? 0 : 2) + (hot ? 0 : 1)].push({ s:s, y:y, bb:bb });
+  }
+  for (var k = 0; k < 4; k++) q[k].sort(function(a, b){ return b.y - a.y; });
+
+  var DEF = [
+    { k:"q1", t:"便宜且高息", star:true },
+    { k:"q2", t:"好公司但贵了", star:false },
+    { k:"q3", t:"便宜但息不够", star:false },
+    { k:"q4", t:"暂不用看", star:false }
+  ];
+  var CAP = [40, 20, 20, 8];
+
+  var h = '<div class="sect">布林位置 50% 为界切「贵 / 便宜」；股息率以 ' + state.alertYield + '% 关注线为界</div>';
+  for (var j = 0; j < 4; j++) {
+    var d = DEF[j], list = q[j];
+    h += '<div class="quad ' + d.k + '">';
+    h += '<div class="q-hd"><b>' + d.t + (d.star ? ' ★' : '') + '</b><u>' + list.length + ' 只</u></div>';
+    if (!list.length) {
+      h += '<div class="q-none">无</div>';
+    } else {
+      h += '<div class="q-ls">';
+      var lim = Math.min(list.length, CAP[j]);
+      for (var m = 0; m < lim; m++) {
+        var it = list[m];
+        var pc = it.bb.pos;
+        var emC = pc < 30 ? "lo" : (pc > 70 ? "hi" : "");
+        h += '<span class="q-i">' + esc(it.s.name) + '<i>' + it.y.toFixed(2) + '%</i>'
+           + '<em class="' + emC + '">' + pc.toFixed(0) + '%</em></span>';
+      }
+      if (list.length > lim) h += '<span class="q-none" style="padding:4px 0">…另有 ' + (list.length - lim) + ' 只</span>';
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+  if (none) h += '<div class="tiny">有 ' + none + ' 只缺价格或 K 线不足 ' + BOLL_P + ' 日，未参与分组。</div>';
+  h += '<div class="tiny" style="margin-top:8px">每个标的后面：第一个百分比是税后股息率，第二个是布林位置'
+     + '（0%=下轨，100%=上轨，青色偏低 / 金色偏高）。左侧两组才是值得看的，右侧两组用来确认「不是我漏了」。</div>';
+  return h;
+}
+
 function renderMatrix() {
   var el = document.getElementById("v-matrix");
+
+  /* 视图切换 */
+  var head = '<div class="chips">'
+    + '<span class="chip' + (state.mtxMode !== "quad" ? " on" : "") + '" data-mtx="matrix">档位矩阵</span>'
+    + '<span class="chip' + (state.mtxMode === "quad" ? " on" : "") + '" data-mtx="quad">布林 × 股息 交叉</span>'
+    + '</div>';
+
+  if (state.mtxMode === "quad") {
+    el.innerHTML = head + quadHTML();
+    return;
+  }
+
   var rows = [];
   for (var i = 0; i < state.stocks.length; i++) {
     var s = state.stocks[i];
     if (state.prices[s.code]) rows.push({ s:s, y:yieldNet(s) });
   }
   if (!rows.length) {
-    el.innerHTML = '<div class="empty">还没有行情数据<br><span class="tiny">先点右上角「刷新行情」</span></div>';
+    el.innerHTML = head + '<div class="empty">还没有行情数据<br><span class="tiny">先点右上角「刷新行情」</span></div>';
     return;
   }
   rows.sort(function(a, b){ return b.y - a.y; });
 
-  var h = '<div class="sect">税后目标股息率 → 对应买入价（原币：A股元 / 港股港元）</div>';
+  var h = head;
+  h += '<div class="sect">税后目标股息率 → 对应买入价（原币：A股元 / 港股港元）</div>';
   h += '<div class="tbwrap"><table><thead><tr>';
-  h += '<th class="l">标的</th><th>现价</th>';
+  h += '<th class="l">标的</th><th>现价</th><th>布林</th>';
   for (var t = 0; t < TARGETS.length; t++) h += '<th>' + TARGETS[t] + '%</th>';
   h += '</tr></thead><tbody>';
 
   for (var j = 0; j < rows.length; j++) {
-    var s = rows[j].s;
-    var p = priceRaw(s);
+    var s2 = rows[j].s;
+    var p = priceRaw(s2);
+    var bb = bollOf(s2);
     h += '<tr>';
-    h += '<td class="l"><span class="mtx-nm">' + esc(s.name)
-       + (isHK(s) ? ' <span style="color:#5C7093;font-size:10px">H</span>' : '') + '</span></td>';
+    h += '<td class="l"><span class="mtx-nm">' + esc(s2.name)
+       + (isHK(s2) ? ' <span style="color:#5C7093;font-size:10px">H</span>' : '') + '</span></td>';
     h += '<td>' + fmt(p) + '</td>';
+    h += '<td class="' + (bb ? ("blv-" + bb.lv) : "") + '">'
+       + (bb ? ((bb.pos < 15 ? "↓" : (bb.pos > 85 ? "↑" : "")) + bb.pos.toFixed(0) + "%") : "--") + '</td>';
     for (var k = 0; k < TARGETS.length; k++) {
-      var bp = buyPrice(s, TARGETS[k]);
+      var bp = buyPrice(s2, TARGETS[k]);
       var hit = p <= bp;
       var depth = hit ? (TARGETS[k] >= 7 ? "hit3" : (TARGETS[k] >= 5 ? "hit2" : "hit1")) : "";
-      h += '<td class="' + depth + '">' + fmt(bp, isHK(s) ? 2 : 2) + '</td>';
+      h += '<td class="' + depth + '">' + fmt(bp, 2) + '</td>';
     }
     h += '</tr>';
   }
   h += '</tbody></table></div>';
   h += '<div class="tiny" style="margin-top:10px">浅色=现价已进入该档买点区间，颜色越深说明股息率越有吸引力。'
-     + '港股（标 H）为港元价，已扣 20% 或 28% 红利税。</div>';
+     + '港股（标 H）为港元价，已扣 20% 或 28% 红利税。<br>'
+     + '「布林」列是现价在 20 日 ±2σ 通道中的位置：↓ 贴下轨、↑ 贴上轨，数字越小越便宜。</div>';
   el.innerHTML = h;
 }
 
@@ -1132,6 +1442,23 @@ function renderData() {
   h += '<div class="src-meta">最后一次核对 <b>' + fmtTs(dv && dv.ts) + '</b>（' + ago(dv && dv.ts) + '）<br>'
      + '本次读到 <i>' + (dv ? dv.rows : '—') + '</i> 条分红记录 · 与池子有差异 <i>' + (dv ? dv.changed : '—') + '</i> 只 · '
      + '下年度新预案 <i>' + (dv ? dv.plans : '—') + '</i> 只</div>';
+  h += '</div></div>';
+
+  /* 布林通道源 */
+  var bl = (state.srcLog && state.srcLog.boll) || null;
+  var blKey = (state.boll && state.boll.key) ? state.boll.key : "";
+  var blDay = blKey.length === 8 ? (blKey.slice(0, 4) + "-" + blKey.slice(4, 6) + "-" + blKey.slice(6, 8)) : "—";
+  var blOk = !!(state.boll && state.boll.ts);
+  h += '<div class="src-row">';
+  h += '<span class="dot ' + (blOk ? "ok" : "off") + '"></span>';
+  h += '<div class="src-body">';
+  h += '<div class="src-name">东方财富 · 日 K 线（前复权）<span>布林通道 ' + BOLL_P + '日 ±' + BOLL_K + 'σ</span></div>';
+  h += '<div class="src-url">push2his.eastmoney.com/api/qt/stock/kline/get?klt=101&amp;fqt=1</div>';
+  h += '<div class="src-meta">最后一次计算 <b>' + fmtTs(state.boll && state.boll.ts) + '</b>（' + ago(state.boll && state.boll.ts) + '）'
+     + (bl && bl.from === "boll.json" ? ' · 来自预生成 boll.json' : ' · 浏览器现场计算') + '<br>'
+     + '本次算成 <i>' + (bl ? bl.got + ' / ' + bl.total : '—') + '</i> 只 · 计算基准日 <b>' + blDay + '</b><br>'
+     + '口径：日线前复权收盘 · 20 日 · ±2 倍总体标准差 · 带宽 &lt;' + BOLL_MIN_BW + '% 视为窄幅横盘不给贴轨信号</div>';
+  h += '<div style="margin-top:7px"><span class="pill go" data-boll="1">重算布林通道</span></div>';
   h += '</div></div>';
 
   /* 手工维护项 */
@@ -1367,6 +1694,7 @@ function renderAll() {
     }
   }
   updateHeader();
+  try { updateBollBanner(); } catch (e2) { }
 }
 
 function updateHeader() {
@@ -1487,7 +1815,10 @@ function updateFresh() {
 var divChecking = false;
 var jpSeq = 0;
 
-function jsonp(url, cb) {
+/* JSONP 取数。param 是回调参数名：东财 datacenter-web 用 callback，
+   push2his 的 K 线接口用 cb——参数名给错会返回裸 JSON，script 静默失败，
+   只能等到 15 秒超时，很难查。 */
+function jsonp(url, cb, param) {
   var name = "__jp" + (++jpSeq);
   var sc = document.createElement("script");
   var settled = false;
@@ -1502,7 +1833,7 @@ function jsonp(url, cb) {
   window[name] = function (d) { done(d); };
   sc.onerror = function () { done(null); };
   setTimeout(function () { done(null); }, 15000);
-  sc.src = url + "&callback=" + name;
+  sc.src = url + "&" + (param || "callback") + "=" + name;
   document.head.appendChild(sc);
 }
 
@@ -1643,6 +1974,190 @@ function checkDividend(force) {
   step();
 }
 
+/* ============ 布林通道抓取（东财日 K，JSONP 免服务器） ============ */
+var bollLoading = false;
+
+/* 东财日K：klt=101 日线 / fqt=1 前复权 */
+function bollURL(s) {
+  return "https://push2his.eastmoney.com/api/qt/stock/kline/get"
+    + "?secid=" + secidOf(s)
+    + "&klt=101&fqt=1&lmt=" + BOLL_LMT + "&end=20500101"
+    + "&fields1=f1&fields2=f51,f53";
+}
+
+/* 同目录若有预生成的 boll.json（收盘快照.py / GitHub Actions 产出）就优先用，
+   手机端可以省掉上百个请求；没有就回落前端现场抓 */
+function loadBollJSON(cb) {
+  if (location.protocol.indexOf("http") !== 0 || typeof fetch !== "function") { cb(false); return; }
+  var done = false;
+  function fin(v) { if (!done) { done = true; cb(v); } }
+  setTimeout(function () { fin(false); }, 6000);
+  fetch("boll.json?t=" + Date.now()).then(function (r) {
+    return r.ok ? r.json() : null;
+  }).then(function (o) {
+    if (o && o.key && o.map) {
+      var n = 0, k0;
+      for (k0 in o.map) if (o.map.hasOwnProperty(k0)) n++;
+      if (n > 0) {
+        /* 太旧的预生成结果不如不用：超过 10 天就作废，免得拿上个月的轨当今天用 */
+        var kd = String(o.key);
+        if (/^\d{8}$/.test(kd)) {
+          var kt = new Date(+kd.slice(0, 4), +kd.slice(4, 6) - 1, +kd.slice(6, 8));
+          if ((Date.now() - kt.getTime()) / 86400000 > 10) { fin(false); return; }
+        } else { fin(false); return; }
+        state.boll = { key:kd, ts:o.ts || new Date().toISOString(), map:o.map };
+        if (!state.srcLog) state.srcLog = {};
+        state.srcLog.boll = {
+          ts: o.ts || new Date().toISOString(), try: new Date().toISOString(),
+          got: n, total: state.stocks.length, from: "boll.json"
+        };
+        saveState();
+        fin(true);
+        return;
+      }
+    }
+    fin(false);
+  }).catch(function () { fin(false); });
+}
+
+/* 今天的布林是否已经算过（ts 落在今天即可，三轨一天一算） */
+function bollFreshToday() {
+  if (!state.boll || !state.boll.ts) return false;
+  var d = new Date(state.boll.ts);
+  if (isNaN(d.getTime())) return false;
+  return d.toDateString() === new Date().toDateString();
+}
+
+function fetchBoll(force) {
+  if (bollLoading) return;
+  if (!state.boll) state.boll = { key:"", ts:null, map:{} };
+
+  if (!force) {
+    if (bollFreshToday()) { updateBollBanner(); return; }
+    loadBollJSON(function (ok) {
+      if (ok) { renderAll(); updateBollBanner(); return; }
+      runBoll();
+    });
+    return;
+  }
+  runBoll();
+}
+
+function runBoll() {
+  if (bollLoading) return;
+  bollLoading = true;
+
+  var map = {}, got = 0, done = 0;
+  var CONC = 4;   /* 实测：4 并发最稳；6 并发会被东财限流掐掉近一半连接 */
+  var hd = document.getElementById("hdSub");
+  var total = state.stocks.length;
+
+  function tip(txt) {
+    if (hd) hd.innerHTML = '<span style="color:var(--acc)">' + txt + '</span>';
+  }
+  tip("正在计算布林通道… 0/" + total + "，请稍候");
+
+  /* 一轮抓取，返回这一轮仍失败的标的 */
+  function pass(list, cb) {
+    if (!list.length) { cb([]); return; }
+    var idx = 0, left = Math.min(CONC, list.length), failed = [];
+
+    function worker() {
+      if (idx >= list.length) { left--; if (left === 0) cb(failed); return; }
+      var s = list[idx++];
+      jsonp(bollURL(s), function (d) {
+        var kl = (d && d.data && d.data.klines) || null;
+        var ok = false;
+        if (kl && kl.length) {
+          var closes = [], lastD = "";
+          for (var k = 0; k < kl.length; k++) {
+            var a = String(kl[k]).split(",");
+            var c = parseFloat(a[1]);
+            if (c > 0) { closes.push(c); lastD = a[0]; }
+          }
+          var st = bollStat(closes);
+          if (st) {
+            map[s.code] = {
+              lo: Math.round(st.lo * 10000) / 10000,
+              mid: Math.round(st.mid * 10000) / 10000,
+              up: Math.round(st.up * 10000) / 10000,
+              n: closes.length, d: lastD
+            };
+            got++;
+            ok = true;
+          }
+        }
+        if (!ok) failed.push(s);
+        done++;
+        if (done % 10 === 0) tip("正在计算布林通道… " + done + "/" + total);
+        setTimeout(worker, 60);
+      }, "cb");
+    }
+    for (var w = 0; w < left; w++) worker();
+  }
+
+  function finish(failed) {
+    bollLoading = false;
+    if (!state.srcLog) state.srcLog = {};
+    var prev = state.srcLog.boll || {};
+    state.srcLog.boll = {
+      ts: got > 0 ? new Date().toISOString() : (prev.ts || null),
+      try: new Date().toISOString(),
+      got: got, total: total, from: "live"
+    };
+    if (got > 0) state.boll = { key: dayKey(), ts: new Date().toISOString(), map: map };
+    saveState();
+    renderAll();
+    updateBollBanner();
+    var dv = document.getElementById("v-data");
+    if (dv && dv.classList.contains("on")) renderData();
+    if (got > 0) {
+      toast("布林通道已更新 " + got + " 只" + (failed && failed.length ? "（" + failed.length + " 只没抓到）" : ""));
+    } else {
+      toast("布林通道没抓到，稍后在「数据」页点「重算布林通道」");
+    }
+  }
+
+  pass(state.stocks.slice(), function (failed) {
+    if (!failed.length) { finish(failed); return; }
+    /* 补抓一轮：东财会随机断连，隔一秒重来通常就通了 */
+    tip("补抓 " + failed.length + " 只…");
+    setTimeout(function () { pass(failed, finish); }, 900);
+  });
+}
+
+/* 顶部布林提醒条：只报「贴下轨 / 贴上轨」，中轨附近不打扰 */
+function updateBollBanner() {
+  var el = document.getElementById("banner3");
+  if (!el) return;
+  var c = bollCount();
+  if (!c.n) { el.className = "banner hide"; el.onclick = null; el.innerHTML = ""; return; }
+
+  var parts = [];
+  if (c.tight) {
+    parts.push('<span style="color:#38DEE8;font-weight:600">' + c.tight + ' 只贴下轨</span>'
+      + (c["brk-lo"] ? '（' + c["brk-lo"] + ' 只已跌破）' : ''));
+  }
+  if (c.rich) parts.push(c.rich + ' 只贴上轨');
+  if (!parts.length) { el.className = "banner hide"; el.onclick = null; el.innerHTML = ""; return; }
+
+  var bd = (state.boll && state.boll.key) ? state.boll.key : "";
+  var bdTxt = bd.length === 8 ? (bd.slice(4, 6) + "/" + bd.slice(6, 8)) : "";
+  el.className = "banner info";
+  el.innerHTML = '布林 ' + BOLL_P + '日 ±' + BOLL_K + 'σ'
+    + (bdTxt ? '（' + bdTxt + ' 起算）' : '') + '：' + parts.join(' · ')
+    + '　<b style="color:#7FC8EE">点此筛选 ›</b>';
+  el.onclick = function () {
+    state.buyFilter = c.tight ? "lo" : "hi";
+    saveState();
+    var b = document.querySelector('nav.tabbar button[data-tab="buy"]');
+    if (b) { b.click(); }
+    renderBuy();
+    updateBollBanner();
+    window.scrollTo(0, 0);
+  };
+}
+
 /* 把公告值写回池子 */
 function applyDiv(changes) {
   var txt = "将按交易所分红公告更新以下标的的每股分红：\n\n";
@@ -1707,16 +2222,42 @@ function applyDiv(changes) {
       saveState();
       renderInd();
       window.scrollTo(0, 0);
+      return;
     }
+    /* 买点页布林筛选 chips */
+    var bf = (el && el.closest) ? el.closest("[data-bf]") : null;
+    if (bf) {
+      state.buyFilter = bf.getAttribute("data-bf");
+      saveState();
+      renderBuy();
+      updateBollBanner();
+      window.scrollTo(0, 0);
+      return;
+    }
+    /* 矩阵页视图切换 */
+    var mx = (el && el.closest) ? el.closest("[data-mtx]") : null;
+    if (mx) {
+      state.mtxMode = mx.getAttribute("data-mtx");
+      saveState();
+      renderMatrix();
+      window.scrollTo(0, 0);
+      return;
+    }
+    /* 数据页「重算布林通道」 */
+    var bo = (el && el.closest) ? el.closest("[data-boll]") : null;
+    if (bo) { fetchBoll(true); return; }
   });
 
   renderAll();
   updateFresh();
+  updateBollBanner();
 
   if (needRefresh()) {
     setTimeout(refreshAll, 400);
   } else {
     checkDividend(false);
+    /* 布林一天一算：先让首屏渲染完，再补通道数据 */
+    setTimeout(function () { fetchBoll(false); }, 1500);
   }
 
   /* 离线兜底：只有在线打开时才注册 Service Worker（file:// 下没有 SW） */

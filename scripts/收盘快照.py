@@ -25,6 +25,7 @@ HTML = os.path.join(HERE, "红利买点工作台.html")
 if not os.path.exists(HTML):
     HTML = os.path.join(HERE, "index.html")
 CSV_HIST = os.path.join(HERE, "历史收盘价.csv")
+BOLL_JSON = os.path.join(HERE, "boll.json")
 LOG = os.path.join(HERE, "快照运行日志.txt")
 
 UA = {
@@ -202,6 +203,85 @@ def check_dividend(pool):
     return diffs, plans
 
 
+def secid(s):
+    """东财证券 id：沪市 1. / 深市 0. / 港股 116."""
+    if s["market"] == "hk":
+        return "116." + s["code"]
+    return ("1." if s["market"] == "sh" else "0.") + s["code"]
+
+
+def fetch_kline(s, lmt=30):
+    """东财日 K（klt=101 日线 / fqt=1 前复权），返回 [(日期, 收盘), ...]
+
+    注意：东财对密集请求会直接断连（Remote end closed connection），
+    所以这里不做重试，交给上层按轮次补抓——重试扎堆反而更容易被掐。
+    """
+    url = ("https://push2his.eastmoney.com/api/qt/stock/kline/get"
+           "?secid=%s&klt=101&fqt=1&lmt=%d&end=20500101"
+           "&fields1=f1&fields2=f51,f53" % (secid(s), lmt))
+    try:
+        req = urllib.request.Request(url, headers=UA)
+        d = json.loads(urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "ignore"))
+        kl = (d.get("data") or {}).get("klines") or []
+        out = []
+        for row in kl:
+            parts = str(row).split(",")
+            if len(parts) < 2:
+                continue
+            try:
+                c = float(parts[1])
+            except Exception:
+                continue
+            if c > 0:
+                out.append((parts[0], c))
+        return out
+    except Exception:
+        return []
+
+
+def boll_json(pool, period=20, mult=2.0, lmt=30, conc=4):
+    """预算 BOLL(20,2) 写成 boll.json —— 页面优先读它，手机上就不必发上百个 K 线请求
+
+    口径与页面完全一致：前复权收盘、20 日、±2 倍「总体」标准差（不是样本标准差）。
+    并发实测：4 并发 11 秒可拿到 108/110；6 并发反而掉到 58/110（触发限流）。
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    bmap, todo = {}, list(pool)
+    for attempt in range(4):
+        if not todo:
+            break
+        if attempt:
+            time.sleep(0.8 * attempt)          # 补抓前先让一让
+        with ThreadPoolExecutor(max_workers=conc) as ex:
+            res = list(zip(todo, ex.map(lambda x: fetch_kline(x, lmt), todo)))
+        nxt = []
+        for s, kl in res:
+            closes = [c for _, c in kl]
+            if len(closes) < period:
+                nxt.append(s)
+                continue
+            arr = closes[-period:]
+            mid = sum(arr) / period
+            sd = (sum((x - mid) ** 2 for x in arr) / period) ** 0.5
+            bmap[s["code"]] = {"lo": round(mid - mult * sd, 4),
+                               "mid": round(mid, 4),
+                               "up": round(mid + mult * sd, 4),
+                               "n": len(closes), "d": kl[-1][0]}
+        todo = nxt
+
+    data = {"key": datetime.now().strftime("%Y%m%d"),
+            "ts": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "period": period, "mult": mult,
+            "note": "前复权日线，20日±2倍总体标准差；由 收盘快照.py 生成",
+            "map": bmap}
+    tmp = BOLL_JSON + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, BOLL_JSON)
+    return len(bmap), len(todo)
+
+
 def main():
     log("=== 收盘快照开始 ===")
     if not os.path.exists(HTML):
@@ -219,6 +299,12 @@ def main():
     day = datetime.now().strftime("%Y-%m-%d")
     got, total = write_history(pool, px, day)
     log("写入历史：今日 %d 条，累计 %d 条" % (got, total))
+
+    try:
+        bok, bbad = boll_json(pool)
+        log("布林通道：算成 %d 只（K线不足 %d 只），已写入 %s" % (bok, bbad, os.path.basename(BOLL_JSON)))
+    except Exception as e:
+        log("布林通道生成失败：%s" % e)
 
     try:
         diffs, plans = check_dividend(pool)

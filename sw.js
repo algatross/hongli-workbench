@@ -9,7 +9,7 @@
  *
  * 改完 index.html 发版时，把 CACHE 版本号改一下，否则老缓存可能被反复命中。
  */
-var CACHE = "hongli-v1.6-20261103";
+var CACHE = "hongli-v1.7-20261104";
 
 var SHELL = [
   "./",
@@ -47,6 +47,10 @@ self.addEventListener("fetch", function (e) {
 
   /* 跨域（行情 / 分红接口）完全放行，交给浏览器直连 */
   if (url.origin !== self.location.origin) return;
+
+  /* boll.json 是每日更新的数据，而且页面用 ?t=时间戳 破缓存。
+     如果让它进缓存，一是会拿到旧轨道，二是每次打开都会堆一条重复条目。 */
+  if (/\.json$/i.test(url.pathname)) return;
 
   e.respondWith(
     fetch(req).then(function (res) {

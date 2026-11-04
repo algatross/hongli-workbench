@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 抓收盘价 + 核对分红
+      - name: 抓收盘价 + 核对分红 + 预算布林
         env:
           HL_ROOT: "."
           TZ: "Asia/Shanghai"
@@ -46,10 +46,12 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- 历史收盘价.csv 分红差异-*.txt 2>/dev/null || git add -A
+          # boll.json 必须一起提交：页面优先读它，手机端就不用每次发上百个 K 线请求
+          git add -- 历史收盘价.csv boll.json 2>/dev/null || true
+          git add -- 分红差异-*.txt 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "今天没有新数据（休市或数据未变），跳过提交"
           else
-            git commit -m "data: 收盘快照 $(date -u +%Y-%m-%d)"
+            git commit -m "data: 收盘快照 + 布林通道 $(date -u +%Y-%m-%d)"
             git push
           fi
