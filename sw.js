@@ -9,7 +9,7 @@
  *
  * 改完 index.html 发版时，把 CACHE 版本号改一下，否则老缓存可能被反复命中。
  */
-var CACHE = "hongli-v1.7-20261104";
+var CACHE = "hongli-v1.9-20261111";
 
 var SHELL = [
   "./",

@@ -266,10 +266,32 @@ nav.tabbar{
 nav.tabbar button{
   flex:1;background:none;border:none;border-radius:0;padding:9px 0 10px;
   display:flex;flex-direction:column;align-items:center;gap:2px;
-  font-size:11px;color:var(--tx3);
+  font-size:10px;color:var(--tx3);min-width:0;
 }
 nav.tabbar button.on{color:var(--acc)}
-nav.tabbar .ic{font-size:15px;line-height:1;font-variant-numeric:tabular-nums}
+nav.tabbar .ic{font-size:14px;line-height:1;font-variant-numeric:tabular-nums}
+
+/* ---------- 自选区 ---------- */
+.wcard{position:relative}
+.wbar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin:-6px 0 12px;padding:0 2px;
+}
+.wtip{
+  font-size:10px;color:var(--tx3);border:1px solid var(--line);
+  border-radius:20px;padding:2px 8px;white-space:nowrap;
+}
+.wnote{
+  font-size:10px;color:var(--gold);flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.wgrow{margin-left:auto;display:flex;gap:6px;flex-shrink:0}
+.wgrow .mini{padding:3px 9px;font-size:10px}
+.mini.danger{color:#F09595;border-color:#5A2A2A}
+.walt{
+  color:var(--acc);text-decoration:none;border-bottom:1px dashed var(--acc);
+  margin-right:8px;cursor:pointer;
+}
 
 #toast{
   position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(12px);
@@ -313,6 +335,7 @@ nav.tabbar .ic{font-size:15px;line-height:1;font-variant-numeric:tabular-nums}
 
 <main>
   <section class="view on" data-view="buy" id="v-buy"></section>
+  <section class="view" data-view="watch" id="v-watch"></section>
   <section class="view" data-view="ind" id="v-ind"></section>
   <section class="view" data-view="matrix" id="v-matrix"></section>
   <section class="view" data-view="hold" id="v-hold"></section>
@@ -322,6 +345,7 @@ nav.tabbar .ic{font-size:15px;line-height:1;font-variant-numeric:tabular-nums}
 
 <nav class="tabbar">
   <button data-tab="buy" class="on"><span class="ic">◎</span>买点</button>
+  <button data-tab="watch"><span class="ic">★</span>自选</button>
   <button data-tab="ind"><span class="ic">☰</span>行业</button>
   <button data-tab="matrix"><span class="ic">▦</span>矩阵</button>
   <button data-tab="hold"><span class="ic">◈</span>持仓</button>
@@ -335,13 +359,48 @@ nav.tabbar .ic{font-size:15px;line-height:1;font-variant-numeric:tabular-nums}
 "use strict";
 
 /* ============ 基础常量 ============ */
-var TAX = { A:0, HKH:0.20, HKNH:0.28, HK:0.10 };
-var TAX_NAME = { A:"A股·免税", HKH:"港通H·20%", HKNH:"港通非H·28%", HK:"港户·10%" };
+/* A 股股息红利所得按「持股期限」差别化扣税：持股 ≤1 个月 20%、1 个月～1 年 10%、>1 年免征。
+   港股通 H 股 20%、非 H 股（红筹）28%、香港账户直接持有 10%。
+   注意：A 股实际是「派息时全额发放、卖出时按持股期限补扣」，
+   所以这里的税后分红是「按该期限一直持有」的口径，不是到账当天的现金。 */
+var TAX = { A:0, A_1Y:0.10, A_1M:0.20, HKH:0.20, HKNH:0.28, HK:0.10 };
+var TAX_NAME = {
+  A:"A股·满1年免征", A_1Y:"A股·1月~1年 10%", A_1M:"A股·<1月 20%",
+  HKH:"港通H·20%", HKNH:"港通非H·28%", HK:"港户·10%"
+};
+/* 持股期限分档：买入日期 → 该档税率（A 股专用，港股不受影响） */
+var HOLD_1M_DAYS = 30;
+var HOLD_1Y_DAYS = 365;
+function holdDays(buyDate) {
+  if (!buyDate) return null;
+  var t = new Date(buyDate + "T00:00:00").getTime();
+  if (isNaN(t)) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+/* 该标的一次性口径用哪个税率档。A 股看持仓里录的买入日期；
+   没录日期 → 按「满 1 年免征」算（保守假设长期持有），并在界面上标「按满1年计」。
+   港股恒按标的自身的税档，与持有期限无关。 */
+function taxKeyOf(s, hold) {
+  if (!isAShare(s)) return s.tax;
+  hold = hold || (state.holdings && state.holdings[s.code]);
+  var d = hold ? holdDays(hold.buy) : null;
+  if (d === null) return "A";             /* 未录买入日期：按满 1 年 */
+  if (d < HOLD_1M_DAYS) return "A_1M";
+  if (d < HOLD_1Y_DAYS) return "A_1Y";
+  return "A";
+}
+function taxRate(s, hold) { return TAX[taxKeyOf(s, hold)] || 0; }
+/* 是否「按满 1 年」兜底的 A 股（界面提示用） */
+function taxAssumed(s, hold) {
+  if (!isAShare(s)) return false;
+  hold = hold || (state.holdings && state.holdings[s.code]);
+  return !hold || !hold.buy;
+}
 var TARGETS = [3,4,5,6,7,8,9];
 var LS_KEY = "divbuy_v1";
 /* 版本号：改了页面就改这两行，手机上用来判断有没有拿到新版（Pages 有缓存） */
-var APP_VER = "v1.7";
-var APP_BUILD = "2026-11-04";
+var APP_VER = "v1.9";
+var APP_BUILD = "2026-11-11";
 
 /* ============ 布林通道参数 ============ */
 var BOLL_P = 20;      /* 周期：20 日 */
@@ -395,7 +454,7 @@ var SEED = [
   ["601336","新华保险","sh","保险",2.73,"A"],
   ["601318","中国平安","sh","保险",2.7,"A"],
   ["601601","中国太保","sh","保险",1.15,"A"],
-  ["02318","中国平安H","hk","保险",3.3,"HKH"],
+  ["02318","中国平安H","hk","保险",3.3,"HKNH"],
   ["01336","新华保险H","hk","保险",3.1,"HKH"],
   // 证券
   ["002736","国信证券","sz","证券",0.45,"A"],
@@ -416,12 +475,12 @@ var SEED = [
   ["600028","中国石化","sh","石油",0.2,"A"],
   ["601857","中国石油","sh","石油",0.47,"A"],
   ["600938","中国海油","sh","石油",1.1449,"A"],
-  ["00883","中国海洋石油","hk","石油",1.85,"HKNH"],
+  ["00883","中国海洋石油","hk","石油",1.85,"HKH"],
   ["00857","中国石油H","hk","石油",0.52,"HKNH"],
   // 有色
   ["000408","藏格矿业","sz","有色",2.5,"A"],
   ["000933","神火股份","sz","有色",0.8,"A"],
-  ["01378","中国宏桥","hk","有色",2.2,"HKNH"],
+  ["01378","中国宏桥","hk","有色",2.2,"HKH"],
   // 钢铁
   ["600282","南钢股份","sh","钢铁",0.2558,"A"],
   ["000708","中信特钢","sz","钢铁",0.6458,"A"],
@@ -536,6 +595,72 @@ function stocksOf(g) {
   return out;
 }
 
+/* ============ 自选区（独立清单，不限池内） ============
+   设计要点：
+   1. 自选股存在 state.watch[]，与池子 state.stocks[] 完全分离——
+      不进买点排名、不进行业页、不影响池子统计。
+   2. 每只自选股带 market/dps/tax，所以能直接复用 stockCardHTML 和 yieldNet；
+      它的现价写进同一个 state.prices[code]，抓价逻辑也复用。
+   3. 分红额来源优先级：手工填 > 页面自动核对（A股）。
+      自选股的港股分红同样无法自动核（东财分红接口不覆盖港股）。
+   4. 代码由「查代码.py」离线确认后写进 DEFAULT_WATCH；页面内也能自己加。
+*/
+var DEFAULT_WATCH = [
+  /* 初始清单：录自 查代码.py 确认过的代码。
+     格式：[代码, 名称, 市场, 每股分红, 税率档, 备注]
+     dps 取「最近完整财年（FY2025）已实施分红」，已与东财公告逐只核对一致。
+     前 8 只在 110 只池内都能找到，加入自选时会自动带出池内的分红与税率。
+     云南白药是池外标的（2026-11-02 因股息率不足 3% 移出池子），
+     它的分红值直接写在此处，不依赖池子。 */
+  ["600900","长江电力","sh",1,"A",""],
+  ["600036","招商银行","sh",2.016,"A",""],
+  ["601318","中国平安","sh",2.7,"A",""],
+  ["600015","华夏银行","sh",0.42,"A",""],
+  ["000423","东阿阿胶","sz",2.7056,"A",""],
+  ["601857","中国石油","sh",0.47,"A",""],
+  ["601919","中远海控","sh",1,"A",""],
+  ["600941","中国移动","sh",4.7037,"A",""],
+  ["600096","云天化","sh",1.4,"A",""],
+  /* 池内登记名是「江中药业」，与东财公告名「华润江中」是同一家（江中药业为其上市主体） */
+  ["600750","华润江中","sh",1.38,"A",""],
+  /* 池外：股息率约 2.89%，不属高息，但作为关注对象保留 */
+  ["000538","云南白药","sz",1.583,"A","股息率约2.9%，非高息"]
+];
+
+/* 自选股对象：{code,name,market,dps,tax,note,addedAt} */
+function watchDefault() {
+  var out = [];
+  for (var i = 0; i < DEFAULT_WATCH.length; i++) {
+    var w = DEFAULT_WATCH[i];
+    out.push({
+      code: w[0], name: w[1], market: w[2],
+      dps: w[3] === undefined ? 0 : w[3],
+      tax: w[4] || (w[2] === "hk" ? "HKNH" : "A"),
+      note: w[5] || "",
+      addedAt: null
+    });
+  }
+  return out;
+}
+function findWatch(code) {
+  for (var i = 0; i < state.watch.length; i++) if (state.watch[i].code === code) return state.watch[i];
+  return null;
+}
+/* 自选股的「是否已在池内」—— 提示用，避免同一只票两处维护 */
+function watchInPool(code) {
+  for (var i = 0; i < state.stocks.length; i++) if (state.stocks[i].code === code) return state.stocks[i];
+  return null;
+}
+/* 市值 / 板块：自选股可能不在池内，给个兜底标签 */
+function watchSector(w) {
+  var s = watchInPool(w.code);
+  return s ? s.sector : "自选";
+}
+function qcodeOf(w) {
+  if (w.market === "hk") return "hk" + w.code;
+  return (w.market === "sh" ? "sh" : "sz") + w.code;
+}
+
 /* ============ 状态 ============ */
 var LS_OK = true;
 try { localStorage.setItem("__probe", "1"); localStorage.removeItem("__probe"); }
@@ -550,8 +675,10 @@ function buildState() {
     arr.push({ code:s[0], name:s[1], market:s[2], sector:s[3], dps:s[4], tax:s[5] });
   }
   return {
-    v:1, fx:0.92, alertYield:5, updatedAt:null,
+    v:3, fx:0.92, alertYield:5, updatedAt:null,
     stocks:arr, prices:{}, holdings:{},
+    watch:watchDefault(),  /* 自选区：独立清单，不影响池子 */
+    watchSeed:(function(){ var a=[]; for(var i=0;i<DEFAULT_WATCH.length;i++) a.push(DEFAULT_WATCH[i][0]); return a; })(),
     indCur:"all",   /* 「行业」页当前选中的一级行业 key */
     buyFilter:"all",/* 「买点」页布林筛选：all / lo / hi */
     mtxMode:"matrix",/* 「矩阵」页视图：matrix / quad */
@@ -575,8 +702,45 @@ function loadState() {
     if (!o.indCur) o.indCur = "all";
     if (!o.buyFilter) o.buyFilter = "all";
     if (!o.mtxMode) o.mtxMode = "matrix";
+    if (!o.watchSort) o.watchSort = "add";
     if (!o.boll || typeof o.boll !== "object") o.boll = { key:"", ts:null, map:{} };
     if (!o.boll.map || typeof o.boll.map !== "object") o.boll.map = {};
+    /* v1 → v2：新增自选区。老用户第一次升级时把 DEFAULT_WATCH 灌进去，
+       之后就以他自己的增删为准（不能每次打开都覆盖，否则删掉的又回来了） */
+    if (o.v === undefined || o.v < 2) {
+      if (!Array.isArray(o.watch)) o.watch = watchDefault();
+      o.v = 2;
+    }
+    if (!Array.isArray(o.watch)) o.watch = [];
+    /* DEFAULT_WATCH 增量合并（每次加载都跑，不限版本号）。
+       用 state.watchSeed 记住「上一次同步时种子清单里有哪些代码」：
+         · 当前种子有、上次种子没有 → 这是**本次新加的股票**，补进用户清单
+         · 当前种子有、上次种子也有   → 早就存在了，用户若删过就尊重删除，不补
+         · 用户自己加的（不在种子里） → 一律保留
+       这样：往 DEFAULT_WATCH 加新股票，老用户下次打开就能看到；
+       而用户删过的股票（哪怕还在种子里）不会反复冒出来；
+       用户清空后也不会被重新灌满。 */
+    (function () {
+      var seedsNow = watchDefault();
+      var seeded = Array.isArray(o.watchSeed) ? o.watchSeed : null;
+      if (seeded === null) {
+        seeded = [];              /* 从没同步过：视为"上次一个都没有" */
+      }
+      var seen0 = {};             /* 上次种子集合 */
+      for (var sk = 0; sk < seeded.length; sk++) seen0[seeded[sk]] = 1;
+      var have = {};              /* 用户当前清单 */
+      for (var wi0 = 0; wi0 < o.watch.length; wi0++) have[o.watch[wi0].code] = 1;
+
+      for (var sj = 0; sj < seedsNow.length; sj++) {
+        var c0 = seedsNow[sj].code;
+        /* 只有「本次种子新增」的才补；老种子已同步过，删了就删了 */
+        if (!seen0[c0] && !have[c0]) o.watch.push(seedsNow[sj]);
+      }
+      /* 记下本次种子集合（含用户已删的，避免下次又判成"新增"） */
+      o.watchSeed = [];
+      for (var dk = 0; dk < seedsNow.length; dk++) o.watchSeed.push(seedsNow[dk].code);
+      o.v = 3;
+    })();
     return o;
   } catch (e) { return null; }
 }
@@ -610,6 +774,7 @@ function pct(n, d) {
 }
 
 function isHK(s) { return s.market === "hk"; }
+function isAShare(s) { return s.market !== "hk"; }
 
 function qcode(s) {
   if (s.market === "hk") return "hk" + s.code;
@@ -635,15 +800,16 @@ function dpsCNY(s) {
 function curSym(s) { return isHK(s) ? "HK$" : "¥"; }
 function curDec(s) { return isHK(s) ? 3 : 2; }
 
-/* 税后分红收益率 —— 分红与股价同币种，汇率自然约掉 */
+/* 税后分红收益率 —— 分红与股价同币种，汇率自然约掉。
+   A 股按持仓里录的买入日期定税率档（未录 = 按满 1 年免征）。 */
 function yieldNet(s) {
   var p = priceRaw(s);
   if (!p) return null;
-  return s.dps * (1 - TAX[s.tax]) / p * 100;
+  return s.dps * (1 - taxRate(s)) / p * 100;
 }
 /* 目标股息率对应买点价（原币，便于直接对照券商下单） */
 function buyPrice(s, t) {
-  return s.dps * (1 - TAX[s.tax]) / (t / 100);
+  return s.dps * (1 - taxRate(s)) / (t / 100);
 }
 /* 已达最高档位 */
 function reachedTier(s) {
@@ -698,7 +864,15 @@ function refreshAll() {
   btn.textContent = "抓取中…";
   btn.disabled = true;
 
+  /* 抓价清单 = 池子 + 自选（自选里池外的也要抓，去重）
+     同一轮抓完，自选股就能和池内股共享价格与时间戳 */
   var list = state.stocks.slice();
+  var seen = {};
+  for (var si = 0; si < list.length; si++) seen[list[si].code] = 1;
+  for (var wi = 0; wi < state.watch.length; wi++) {
+    var w = state.watch[wi];
+    if (!seen[w.code]) { seen[w.code] = 1; list.push(w); }
+  }
   var idx = 0, got = 0, CHUNK = 12;
 
   /* 手机首屏先显示「正在抓取」，避免误以为看的是死数据 */
@@ -843,7 +1017,12 @@ function stockCardHTML(s, y, opt) {
   if (opt.rank) h += '<span class="rk">' + opt.rank + '</span>';
   h += '<span class="nm">' + esc(s.name) + '</span>';
   h += '<span class="cd">' + s.code + '</span>';
-  h += '<span class="tag ' + (isHK(s) ? 'hk' : 'a') + '">' + TAX_NAME[s.tax] + '</span>';
+  /* 税率标签显示「本次实际生效的那一档」，而不是标的自身字段——
+     否则持有不满 1 年时界面写「免税」、算的却是 10%，自相矛盾 */
+  var tk = taxKeyOf(s), tAssumed = taxAssumed(s);
+  h += '<span class="tag ' + (tk === "A" && tAssumed ? 'a assumed' : (isHK(s) ? 'hk' : 'a')) + '"'
+     + ' title="' + (isHK(s) ? esc(TAX_NAME[tk]) : (tAssumed ? '未录买入日期，按「持股满 1 年免征」计；录了日期会自动按实际期限分档' : esc(TAX_NAME[tk]))) + '">'
+     + TAX_NAME[tk] + (tAssumed ? '*' : '') + '</span>';
   var hd0 = state.holdings[s.code];
   h += '<span class="gobtn" data-hold="' + s.code + '">'
      + (hd0 && hd0.qty ? (hd0.qty + '股 ›') : '仓位 ›') + '</span>';
@@ -1250,7 +1429,7 @@ function renderHold() {
     if (!hd || !hd.qty) continue;
     var s = findStock(codes[i]);
     if (!s) continue;
-    list.push({ s:s, qty:hd.qty, cost:hd.cost || 0 });
+    list.push({ s:s, qty:hd.qty, cost:hd.cost || 0, buy:hd.buy || null, hold:hd });
   }
 
   if (!list.length) {
@@ -1259,7 +1438,7 @@ function renderHold() {
     return;
   }
 
-  var totMv = 0, totCost = 0, totDiv = 0, noPx = 0;
+  var totMv = 0, totCost = 0, totDiv = 0, noPx = 0, assumed = 0;
   var h = '<div class="sect">持仓总览</div>';
   var body = "";
   for (var j = 0; j < list.length; j++) {
@@ -1268,9 +1447,13 @@ function renderHold() {
     var fx = isHK(s2) ? state.fx : 1;
     var mv = p === null ? null : it.qty * p;
     var cost = it.qty * it.cost * fx;
-    var div = dpsCNY(s2) * (1 - TAX[s2.tax]) * it.qty;
-    var cdy = it.cost > 0 ? (dpsCNY(s2) * (1 - TAX[s2.tax]) / (it.cost * fx) * 100) : null;
+    var rate = taxRate(s2, it.hold);          /* 按持股期限取的税率 */
+    var tk = taxKeyOf(s2, it.hold);
+    var tAssumed = taxAssumed(s2, it.hold);
+    var div = dpsCNY(s2) * (1 - rate) * it.qty;
+    var cdy = it.cost > 0 ? (dpsCNY(s2) * (1 - rate) / (it.cost * fx) * 100) : null;
     if (mv !== null) totMv += mv; else noPx++;
+    if (tAssumed) assumed++;
     totCost += cost;
     totDiv += div;
 
@@ -1287,6 +1470,12 @@ function renderHold() {
     }
     body += '<div class="kv"><span>成本股息率 CDY</span><b>' + (cdy === null ? "--" : pct(cdy)) + '</b></div>';
     body += '<div class="kv"><span>年税后分红</span><b style="color:#FBBF24">¥' + fmt(div, 0) + '</b></div>';
+    /* 税率档 + 持股天数：让「为什么是 0% 或 10%」有据可查 */
+    var holdTxt = tAssumed ? '未录买入日期'
+      : (function(){ var dd = holdDays(it.buy); return dd === null ? '日期有误' : ('持有 ' + dd + ' 天'); })();
+    body += '<div class="kv"><span>股息税率</span><b>' + TAX_NAME[tk]
+         + (tAssumed ? ' <span class="tiny">（按满1年，未录日期）</span>'
+                     : ' <span class="tiny">（' + holdTxt + '）</span>') + '</b></div>';
     body += '<div class="rowbtn"><button class="mini ghost" data-hold="' + s2.code + '">修改持仓</button></div>';
     body += '</div>';
   }
@@ -1303,6 +1492,14 @@ function renderHold() {
   h += '<div class="kv"><span>年税后被动收入</span><b style="color:#FBBF24;font-size:17px">¥' + fmt(totDiv, 0) + '</b></div>';
   h += '<div class="kv"><span>月均被动收入</span><b style="color:#FBBF24">¥' + fmt(totDiv / 12, 0) + '</b></div>';
   h += '</div>';
+  if (assumed) {
+    h += '<div class="tiny" style="margin:6px 0 4px;color:#FBBF24">有 ' + assumed
+       + ' 只 A 股未录买入日期，暂按「持股满 1 年免征」估算。<br>'
+       + '持有不满 1 年会被扣 10%~20%，点「修改持仓」补上买入日期即可按实际期限重算。</div>';
+  } else {
+    h += '<div class="tiny" style="margin:6px 0 4px">A 股按持股期限分档计税：满 1 年免征 / 1 月~1 年 10% / 不足 1 月 20%。<br>'
+       + '实际是派息时全额发放、卖出时补扣，这里算的是「按该期限一直持有」的税后口径。</div>';
+  }
   h += '<div class="sect">持仓明细</div>';
   h += body;
 
@@ -1311,6 +1508,263 @@ function renderHold() {
 
 /* ============ 渲染：加仓推演 ============ */
 var simCode = null;
+
+/* ============ 渲染：自选区 ============ */
+/* 排序模式：add=按添加顺序 / yield=按股息率 / chg=按涨跌幅 */
+function watchSorted() {
+  var arr = state.watch.slice();
+  var mode = state.watchSort || "add";
+  if (mode === "yield") {
+    arr.sort(function(a, b){ return (yieldNet(b) || -999) - (yieldNet(a) || -999); });
+  } else if (mode === "chg") {
+    arr.sort(function(a, b){
+      var qa = state.prices[a.code], qb = state.prices[b.code];
+      var da = (qa && qa.prev) ? (qa.p / qa.prev - 1) : -999;
+      var db = (qb && qb.prev) ? (qb.p / qb.prev - 1) : -999;
+      return db - da;
+    });
+  }
+  return arr;
+}
+
+/* 自选股 → 一个「假 stock」对象，好让 stockCardHTML 直接吃 */
+function asStock(w) {
+  return { code:w.code, name:w.name, market:w.market, sector:watchSector(w), dps:w.dps, tax:w.tax };
+}
+
+function renderWatch() {
+  var el = document.getElementById("v-watch");
+  var list = watchSorted();
+  var h = "";
+
+  /* ---- 顶部：统计 + 添加 ---- */
+  var withPx = 0, hot = 0, inPool = 0;
+  for (var i = 0; i < list.length; i++) {
+    var w = list[i];
+    if (state.prices[w.code]) withPx++;
+    var y = yieldNet(asStock(w));
+    if (y !== null && y >= state.alertYield) hot++;
+    if (watchInPool(w.code)) inPool++;
+  }
+
+  h += '<div class="sect">自选 ' + list.length + ' 只 · ' + withPx + ' 只有价'
+     + (hot ? ' · <span style="color:#FBBF24">' + hot + ' 只已达 ' + state.alertYield + '%</span>' : '')
+     + '</div>';
+
+  h += '<div class="wstat" style="grid-template-columns:repeat(3,1fr)">';
+  h += '<div><b>' + list.length + '</b><span>自选只数</span></div>';
+  h += '<div><b style="color:' + (hot ? "#FBBF24" : "#E8EEF8") + '">' + hot + '</b><span>已达关注线</span></div>';
+  h += '<div><b>' + (inPool) + '</b><span>池内重复</span></div>';
+  h += '</div>';
+
+  /* ---- 添加区 ---- */
+  h += '<div class="card">';
+  h += '<label class="fl">添加自选（输入代码，或名称后点「查代码」）</label>';
+  h += '<div style="display:flex;gap:6px">';
+  h += '<input id="wCode" placeholder="如 600519 或 贵州茅台" style="flex:1">';
+  h += '<button class="mini" id="wLookup" style="white-space:nowrap">查代码</button>';
+  h += '</div>';
+  h += '<div id="wLookupOut" class="tiny" style="margin-top:6px"></div>';
+  h += '<div class="rowbtn"><button class="primary" id="wAdd">+ 加入自选</button></div>';
+  h += '</div>';
+
+  /* ---- 排序切换 ---- */
+  if (list.length) {
+    h += '<div class="chips">';
+    var modes = [["add","添加顺序"],["yield","按股息率"],["chg","按涨跌幅"]];
+    for (var m = 0; m < modes.length; m++) {
+      h += '<span class="chip' + ((state.watchSort || "add") === modes[m][0] ? " on" : "") + '" data-wsort="'
+         + modes[m][0] + '">' + modes[m][1] + '</span>';
+    }
+    h += '</div>';
+  }
+
+  /* ---- 列表 ---- */
+  if (!list.length) {
+    h += '<div class="empty">自选区还是空的<br><span class="tiny">上面输入股票代码，或说给我听，我来加</span></div>';
+    el.innerHTML = h;
+    bindWatch();
+    return;
+  }
+
+  for (var j = 0; j < list.length; j++) {
+    var wj = list[j];
+    var sj = asStock(wj);
+    var inP = watchInPool(wj.code);
+    var yj = yieldNet(sj);
+
+    /* 卡片下方追加一条「自选管理」行：备注 + 编辑 + 移除 */
+    h += '<div class="wcard" data-wcode="' + wj.code + '">';
+    h += stockCardHTML(sj, yj === null ? -999 : yj, {});
+    h += '<div class="wbar">';
+    if (inP) h += '<span class="wtip">已在池内 · ' + esc(inP.sector) + '</span>';
+    else h += '<span class="wtip">池外标的</span>';
+    if (wj.note) h += '<span class="wnote">' + esc(wj.note) + '</span>';
+    h += '<span class="wgrow">';
+    h += '<button class="mini ghost" data-wedit="' + wj.code + '">编辑</button>';
+    h += '<button class="mini ghost danger" data-wdel="' + wj.code + '">移除</button>';
+    h += '</span>';
+    h += '</div>';
+    h += '</div>';
+  }
+  el.innerHTML = h;
+  bindWatch();
+}
+
+/* 自选区事件绑定 */
+function bindWatch() {
+  var addBtn = document.getElementById("wAdd");
+  if (addBtn) addBtn.onclick = function() {
+    var raw = (document.getElementById("wCode").value || "").trim();
+    if (!raw) { toast("请先填代码或名称"); return; }
+    addWatchByInput(raw);
+  };
+  var lk = document.getElementById("wLookup");
+  if (lk) lk.onclick = function() {
+    var raw = (document.getElementById("wCode").value || "").trim();
+    if (!raw) { toast("请先填名称"); return; }
+    lookupStock(raw);
+  };
+}
+
+/* 按输入内容加自选：纯代码直接加，中文名先查 */
+function addWatchByInput(raw) {
+  var m = /^\d{6}$/.test(raw) || /^\d{5}$/.test(raw);
+  if (m) {
+    var market = /^\d{5}$/.test(raw) ? "hk" : (/^6/.test(raw) ? "sh" : "sz");
+    doAddWatch({ code: raw, name: "", market: market });
+  } else {
+    lookupStock(raw, true);
+  }
+}
+
+/* 名称 → 代码：走东财搜索（JSONP，无需服务器） */
+function lookupStock(kw, andAdd) {
+  var out = document.getElementById("wLookupOut");
+  if (out) out.innerHTML = '<span style="color:var(--acc)">查询中…</span>';
+  var url = "https://searchapi.eastmoney.com/api/suggest/get"
+          + "?input=" + encodeURIComponent(kw)
+          + "&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=12";
+  jsonp(url, function (d) {
+    var items = (d && d.QuotationCodeTable && d.QuotationCodeTable.Data) || [];
+    var keep = { "0":"sz", "1":"sh", "116":"hk" };
+    var hits = [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var mk = keep[String(it.MktNum)];
+      if (!mk) continue;
+      hits.push({ code: it.Code, name: it.Name, market: mk, type: it.SecurityTypeName });
+    }
+    if (!hits.length) {
+      if (out) out.innerHTML = '<span style="color:#F09595">没找到「' + esc(kw) + '」，确认一下名称或直接填 6 位代码</span>';
+      return;
+    }
+    var exact = null;
+    for (var j = 0; j < hits.length; j++) if (hits[j].name === kw) exact = hits[j];
+    var pick = exact || hits[0];
+
+    if (out) {
+      var html = '找到 <b style="color:var(--acc)">' + esc(pick.name) + ' ' + pick.code + '</b>（' + esc(pick.type || pick.market) + '）';
+      if (hits.length > 1) {
+        html += '<br>其他候选：';
+        for (var k = 0; k < Math.min(hits.length, 4); k++) {
+          if (hits[k] === pick) continue;
+          html += '<a href="javascript:void(0)" class="walt" data-wpick="' + hits[k].code + '|'
+               + esc(hits[k].name) + '|' + hits[k].market + '">' + esc(hits[k].name) + ' ' + hits[k].code + '</a> ';
+        }
+      }
+      out.innerHTML = html;
+      var alts = out.querySelectorAll("[data-wpick]");
+      for (var q = 0; q < alts.length; q++) {
+        alts[q].onclick = function () {
+          var p = this.getAttribute("data-wpick").split("|");
+          doAddWatch({ code:p[0], name:p[1], market:p[2] }, true);
+        };
+      }
+    }
+    if (andAdd) doAddWatch({ code: pick.code, name: pick.name, market: pick.market }, true);
+  }, "callback");
+}
+
+/* 真正写入自选 */
+function doAddWatch(item, silent) {
+  if (findWatch(item.code)) { toast("「" + (item.name || item.code) + "」已在自选区"); return; }
+  var pool = watchInPool(item.code);
+  state.watch.push({
+    code: item.code,
+    name: item.name || (pool ? pool.name : item.code),
+    market: item.market,
+    dps: pool ? pool.dps : 0,
+    tax: pool ? pool.tax : (item.market === "hk" ? "HKNH" : "A"),
+    note: "",
+    addedAt: new Date().toISOString()
+  });
+  saveState();
+  renderWatch();
+  refreshWatchQuotes();
+  if (!silent) {
+    toast("已加入自选：" + (item.name || item.code) + (pool ? "（已带出池内分红，可去核对）" : "（记得补每股分红）"));
+  }
+}
+
+/* 编辑某只自选：名称 / 每股分红 / 备注 */
+function editWatch(code) {
+  var w = findWatch(code);
+  if (!w) return;
+  var name = prompt("名称", w.name || "");
+  if (name === null) return;
+  var d = prompt("每股分红（" + (w.market === "hk" ? "港元" : "元") + "，可留空）", w.dps || "");
+  if (d === null) return;
+  var n = prompt("备注（如「等 5.5% 加」「季度看一次」，可留空）", w.note || "");
+  if (n === null) return;
+  w.name = (name || w.name || code).trim();
+  var dv = parseFloat(d);
+  if (!isNaN(dv) && dv >= 0) w.dps = dv;
+  w.note = (n || "").trim();
+  saveState();
+  renderWatch();
+  toast("已更新自选");
+}
+
+function delWatch(code) {
+  var w = findWatch(code);
+  if (!w) return;
+  if (!confirm("把「" + (w.name || code) + "」移出自选区？\n（池子里的数据不受影响）")) return;
+  var out = [];
+  for (var i = 0; i < state.watch.length; i++) if (state.watch[i].code !== code) out.push(state.watch[i]);
+  state.watch = out;
+  saveState();
+  renderWatch();
+  toast("已移出自选");
+}
+
+/* 只给自选股抓价（单独一轮，不打扰主池） */
+function refreshWatchQuotes() {
+  if (!state.watch.length) return;
+  var need = [];
+  for (var i = 0; i < state.watch.length; i++) {
+    var w = state.watch[i];
+    if (!state.prices[w.code]) need.push(w);
+  }
+  if (!need.length) return;
+  var codes = need.map(qcodeOf);
+  fetchQuotes(codes, function () {
+    var got = 0;
+    for (var j = 0; j < need.length; j++) {
+      var wj = need[j];
+      var g = window["v_" + qcodeOf(wj)];
+      if (typeof g === "string" && g.length > 20) {
+        var a = g.split("~");
+        var cur = parseFloat(a[3]);
+        if (cur > 0) {
+          state.prices[wj.code] = { p:cur, prev:parseFloat(a[4]) || null, t:a[30] || "", at:Date.now() };
+          got++;
+        }
+      }
+    }
+    if (got) { saveState(); renderWatch(); }
+  });
+}
 
 function renderSim() {
   var el = document.getElementById("v-sim");
@@ -1373,7 +1827,11 @@ function doSim() {
   var newQty = oldQty + addQty;
   var newCost = (oldQty * oldCost + addQty * pxRaw) / newQty;
 
-  var divPerShareNetCNY = dpsCNY(s) * (1 - TAX[s.tax]);
+  /* 加仓这一笔是「今天买入」，因此 A 股新份额按「1 月~1 年 10%」档算；
+     老仓按已录的买入日期算。港股与期限无关，两笔都用同一税档。 */
+  var newRate = isAShare(s) ? TAX.A_1Y : TAX[s.tax];
+  var oldRate = taxRate(s, hd);
+  var divPerShareNetCNY = dpsCNY(s) * (1 - newRate);
   var newCdy = divPerShareNetCNY / (newCost * fx) * 100;
   var addDiv = divPerShareNetCNY * addQty;
   var addDivMonthly = addDiv / 12;
@@ -1390,7 +1848,7 @@ function doSim() {
     var dlt = (newCost / oldCost - 1) * 100;
     h += '<div class="kv"><span>成本变化</span><b class="' + (dlt <= 0 ? "down" : "up") + '">'
        + (dlt > 0 ? "+" : "") + dlt.toFixed(2) + '%</b></div>';
-    var oldCdy = divPerShareNetCNY / (oldCost * fx) * 100;
+    var oldCdy = dpsCNY(s) * (1 - oldRate) / (oldCost * fx) * 100;
     h += '<div class="kv"><span>CDY 变化</span><b>' + pct(oldCdy) + ' → <span style="color:#22D3EE">' + pct(newCdy) + '</span></b></div>';
   } else {
     h += '<div class="kv"><span>加仓后 CDY</span><b style="color:#22D3EE">' + pct(newCdy) + '</b></div>';
@@ -1400,6 +1858,7 @@ function doSim() {
   h += '</div>';
 
   h += '<div class="tiny">按该股当前每股分红与你的税率静态推算，未考虑分红未来变化与手续费。'
+     + (isAShare(s) ? '加仓这一笔按「持有 1 月~1 年 10%」计（新买入份额满 1 年后免征），老仓按其买入日期对应的档位。' : '')
      + '实际以券商成交为准。</div>';
   out.innerHTML = h;
 }
@@ -1518,10 +1977,11 @@ function renderData() {
     h += '<div class="edt">';
     h += '<input value="' + esc(s.name) + '" data-f="name" data-c="' + s.code + '" placeholder="名称">';
     h += '<input value="' + s.dps + '" type="number" step="0.001" data-f="dps" data-c="' + s.code + '" placeholder="每股分红">';
-    h += '<select data-f="tax" data-c="' + s.code + '">';
+    h += '<select data-f="tax" data-c="' + s.code + '" title="该标的所属的股息税档；A 股的 10%/20% 档按持仓里的买入日期自动切换">';
     var keys = ["A","HKH","HKNH","HK"];
     for (var k = 0; k < keys.length; k++) {
-      h += '<option value="' + keys[k] + '"' + (s.tax === keys[k] ? " selected" : "") + '>' + keys[k] + '</option>';
+      h += '<option value="' + keys[k] + '"' + (s.tax === keys[k] ? " selected" : "") + '>'
+         + keys[k] + ' · ' + (TAX_NAME[keys[k]] || keys[k]) + '</option>';
     }
     h += '</select>';
     h += '<input value="' + (q ? q.p : "") + '" type="number" step="0.001" data-f="px" data-c="' + s.code + '" placeholder="' + (isHK(s) ? "港价" : "现价") + '">';
@@ -1536,7 +1996,8 @@ function renderData() {
      + '<b style="color:#E8EEF8">税后股息率</b> = 每股分红 ×（1 − 税率）÷ 现价<br>'
      + '<b style="color:#E8EEF8">目标买点价</b> = 每股分红 ×（1 − 税率）÷ 目标股息率<br>'
      + '<b style="color:#E8EEF8">CDY 成本股息率</b> = 每股分红 ×（1 − 税率）÷ 买入成本<br><br>'
-     + '税率：A股持股满 1 年免税计 0；港股通 H 股 20%；港股通非 H 股 28%；港股账户直接持有 10%。<br>'
+     + '税率：A 股按<b>持股期限</b>分档——满 1 年免征 0% / 满 1 月不满 1 年 10% / 不满 1 月 20%（取自持仓里的买入日期，未录则按满 1 年计并标 *）；<br>'
+     + '港股通 H 股 20%；港股通非 H 股（红筹）28%；港股账户直接持有 10%。<br>'
      + '港股分红与股价按上方汇率折算成人民币后再比较，避免两地口径混算。<br><br>'
      + '内置分红数据为公开信息整理，<b style="color:#FBBF24">仅供估算，动手前请对照公告核对</b>。'
      + '本工具不构成投资建议。'
@@ -1666,7 +2127,18 @@ function editHolding(code) {
   if (c === null) return;
   var cost = parseFloat(c);
   if (isNaN(cost) || cost < 0) { toast("成本填写有误"); return; }
-  state.holdings[code] = { qty:qty, cost:cost };
+  /* A 股才问买入日期：股息红利按持股期限分档，港股通与持有期限无关。
+     填错/留空都不拦，留空按「满 1 年免征」算并在卡片上标记。 */
+  var buy = hd.buy || "";
+  if (isAShare(s)) {
+    var b = prompt("最早一笔的买入日期（YYYY-MM-DD，可留空）\n"
+                 + "用于算股息税：满 1 年免征 / 1 月~1 年 10% / 不足 1 月 20%", buy);
+    if (b === null) return;
+    b = (b || "").trim();
+    if (b && !/^\d{4}-\d{2}-\d{2}$/.test(b)) { toast("日期格式应为 YYYY-MM-DD，已保留原值"); }
+    else buy = b;
+  }
+  state.holdings[code] = { qty:qty, cost:cost, buy:buy };
   saveState(); renderAll(); toast("已更新持仓");
 }
 
@@ -1686,7 +2158,7 @@ function esc(s) {
 
 function renderAll() {
   /* 每个页面独立兜底：某一页出错不应把其余页面拖成空白 */
-  var fns = [renderBuy, renderInd, renderMatrix, renderHold, renderSim, renderData];
+  var fns = [renderBuy, renderWatch, renderInd, renderMatrix, renderHold, renderSim, renderData];
   for (var i = 0; i < fns.length; i++) {
     try { fns[i](); }
     catch (e) {
@@ -1856,6 +2328,15 @@ function checkDividend(force) {
   var plan = {};     // code -> [已公布未实施的预案]
   var totalRows = 0; // 本次抓到的原始记录数，用于判断接口是否真的通了
 
+  /* 按「财年」归集：报告期 6-30 / 9-30 属本财年，次年 3-31(一季报) / 4-30 属上一财年。
+     原按「报告期年份」累加会把 FY2026 中期算进 FY2025，导致股息率虚高。 */
+  function fyOf(rd) {
+    var y = parseInt(rd.slice(0, 4), 10);
+    var mmdd = rd.slice(5);
+    if (mmdd === "03-31" || mmdd === "04-30") return y - 1;
+    return y;
+  }
+
   function ingest(d) {
     var res = d && d.result;
     if (!res || !res.data) return 0;
@@ -1871,12 +2352,13 @@ function checkDividend(force) {
         plan[code].push({ rd: rd, dps: b / 10 });
         continue;
       }
-      var y = parseInt(rd.slice(0, 4), 10);
+      var fy = fyOf(rd);
       if (!acc[code]) acc[code] = {};
-      acc[code][y] = (acc[code][y] || 0) + b / 10;
+      acc[code][fy] = (acc[code][fy] || 0) + b / 10;
+      /* 只有年报（12-31）才代表该财年出齐，用它判定"完整财年" */
       if (rd.slice(5) === "12-31") {
         if (!hasAnnual[code]) hasAnnual[code] = {};
-        hasAnnual[code][y] = true;
+        hasAnnual[code][fy] = true;
       }
     }
     return res.pages || 0;
@@ -1920,7 +2402,11 @@ function checkDividend(force) {
 
     var parts = [];
     if (changes.length) {
-      parts.push("分红公告有变动：" + changes.length + " 只的分红额与 FY2025 已实施值不符，点这里核对更新 ›");
+      var fys = [];
+      for (var c0 = 0; c0 < changes.length; c0++) if (fys.indexOf(changes[c0].fy) < 0) fys.push(changes[c0].fy);
+      fys.sort();
+      parts.push("分红公告有变动：" + changes.length + " 只的分红额与内置值不符（按 FY"
+               + fys.join("/FY") + " 已实施口径），点这里核对更新 ›");
     }
     if (plans.length) {
       parts.push("新公告：" + plans.length + " 只已公布下一年度分红预案（尚未实施），暂不计入股息率。");
@@ -2163,9 +2649,10 @@ function applyDiv(changes) {
   var txt = "将按交易所分红公告更新以下标的的每股分红：\n\n";
   for (var i = 0; i < changes.length; i++) {
     txt += changes[i].name + "  " + changes[i].old.toFixed(4) + " → " + changes[i].neu.toFixed(4)
-      + "（" + (changes[i].dev > 0 ? "+" : "") + changes[i].dev.toFixed(0) + "%）\n";
+      + "（FY" + changes[i].fy + "，" + (changes[i].dev > 0 ? "+" : "") + changes[i].dev.toFixed(0) + "%）\n";
   }
-  txt += "\n口径：该财年各期「每10股派息(含税)」合计 ÷ 10，只计已实施。\n确认更新？";
+  txt += "\n口径：按「财年」归集各报告期「每10股派息(含税)」÷ 10，只计已实施。\n"
+       + "即 FY2025 = 2025 中期 + 2025 年报（不含 2026 中期）。\n确认更新？";
   if (!confirm(txt)) return;
 
   var n = 0;
@@ -2203,6 +2690,7 @@ function applyDiv(changes) {
       /* 数据页每次切过去都重渲染，保证「数据源与刷新时间」是最新的 */
       if (name === "data") { renderData(); updateHeader(); }
       if (name === "ind") renderInd();
+      if (name === "watch") { renderWatch(); refreshWatchQuotes(); }
       window.scrollTo(0, 0);
     };
   }
@@ -2213,6 +2701,23 @@ function applyDiv(changes) {
     var el = e.target;
     if (el && el.getAttribute && el.getAttribute("data-hold")) {
       editHolding(el.getAttribute("data-hold"));
+      return;
+    }
+    if (el && el.getAttribute && el.getAttribute("data-wedit")) {
+      editWatch(el.getAttribute("data-wedit"));
+      return;
+    }
+    if (el && el.getAttribute && el.getAttribute("data-wdel")) {
+      delWatch(el.getAttribute("data-wdel"));
+      return;
+    }
+    /* 自选区排序切换 */
+    var ws = (el && el.closest) ? el.closest("[data-wsort]") : null;
+    if (ws) {
+      state.watchSort = ws.getAttribute("data-wsort");
+      saveState();
+      renderWatch();
+      window.scrollTo(0, 0);
       return;
     }
     /* 行业页签 / 行业总览行 */

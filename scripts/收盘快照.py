@@ -89,8 +89,59 @@ def fetch_quotes(pool):
     return px
 
 
-def write_history(pool, px, day):
-    """按 (日期, 代码) 去重写入，已有当天记录则更新"""
+def fetch_close_kline(pool, conc=4, lmt=6):
+    """用东财日 K（不复权 fqt=0）拿「真实收盘价」，返回 {code: (日期, 收盘, 昨收)}
+
+    为什么要这一步：快照若在收盘前跑（或计划任务延迟），腾讯行情给的是**盘中价**，
+    记成"收盘价"就污染了历史曲线——实测 2026-11-02 14:10 那次，长江电力记的是
+    29.44，当天真实收盘是 29.50。日 K 只有收盘后才定稿，用它兜底才准。
+
+    ⚠ 关键坑：盘中时东财**也会返回当天那一根**，但那只是开盘后瞬间的临时值
+    （实测 09:26 长江电力当天 K 线成交量仅 2,919，而前一日 61 万）。
+    所以必须先判断「交易是否已结束」，否则会把开盘价当收盘价写进历史。
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    def market_closed(day):
+        """A 股 15:00 收盘、港股 16:00 收盘；留 30 分钟给交易所与东财落定"""
+        now = datetime.now()
+        if day != now.strftime("%Y-%m-%d"):
+            return True
+        return now.hour * 60 + now.minute >= 16 * 60 + 30
+
+    out, todo = {}, list(pool)
+    for attempt in range(3):
+        if not todo:
+            break
+        if attempt:
+            time.sleep(0.8 * attempt)
+        with ThreadPoolExecutor(max_workers=conc) as ex:
+            res = list(zip(todo, ex.map(lambda x: fetch_kline(x, lmt), todo)))
+        nxt = []
+        for s, kl in res:
+            if not kl:
+                nxt.append(s)
+                continue
+            last_d, last_c = kl[-1]
+            # 最新一根必须是「已收盘的今天」，否则今天没有可用的收盘价
+            if last_d == datetime.now().strftime("%Y-%m-%d") and not market_closed(last_d):
+                out[s["code"]] = ("", 0.0, None)      # 显式标记：今日尚未收盘
+                continue
+            prev_c = kl[-2][1] if len(kl) >= 2 else None
+            out[s["code"]] = (last_d, last_c, prev_c)
+        todo = nxt
+    return out
+
+
+def write_history(pool, px, day, closes=None):
+    """按 (日期, 代码) 去重写入
+
+    价格优先级：
+      1) closes（东财日 K 里「今天那一根」）= 真实收盘价，最可信
+      2) px（腾讯行情快照）= 盘中价，仅在收盘后才等于全天价
+
+    同一天同一只票重跑会更新；不同天只补缺，不覆盖别的日期。
+    """
     rows = {}
     header = ["日期", "代码", "名称", "市场", "板块", "收盘价", "昨收", "涨跌幅%", "行情时间", "抓取时间"]
     if os.path.exists(CSV_HIST):
@@ -104,17 +155,31 @@ def write_history(pool, px, day):
         except Exception as e:
             log("  读取历史 CSV 失败（将新建）: %s" % e)
 
+    closes = closes or {}
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     today_key = day.replace("-", "")
     got = 0
+    from_k = 0
+    intraday = 0
     stale = 0
     for s in pool:
+        k = closes.get(s["code"])
+        # 1) 日 K 收盘价：必须「最新一根 = 今天、且今天已收盘」，否则不可用
+        if k and k[0] == day and k[1] > 0:
+            prev = k[2]
+            chg = (k[1] / prev - 1) * 100 if prev else 0.0
+            rows[(day, s["code"])] = [day, s["code"], s["name"], s["market"], s["sector"],
+                                     "%.3f" % k[1], ("%.3f" % prev) if prev else "",
+                                     ("%.2f" % chg) if prev else "",
+                                     "日K收盘", now]
+            got += 1
+            from_k += 1
+            continue
+
         q = px.get(qcode(s))
         if not q:
             continue
-        # 行情时间 A股是「YYYYMMDDHHMMSS」，港股是「YYYY/MM/DD HH:MM:SS」，
-        # 去掉分隔符后取前 8 位统一比对。日期不是今天说明休市 / 停牌，
-        # 记进去只会污染历史曲线，直接跳过
+        # 2) 行情快照：日期不是今天说明休市 / 停牌，记进去只会污染历史曲线
         qt = str(q.get("time") or "")
         qt_norm = re.sub(r"[^0-9]", "", qt)
         if len(qt_norm) >= 8 and qt_norm[:8] != today_key:
@@ -125,6 +190,7 @@ def write_history(pool, px, day):
                                  "%.3f" % q["p"], "%.3f" % q["prev"], "%.2f" % chg,
                                  q["time"], now]
         got += 1
+        intraday += 1
 
     if stale:
         log("  跳过 %d 只（行情时间非今日，休市或停牌）" % stale)
@@ -133,10 +199,25 @@ def write_history(pool, px, day):
     with open(tmp, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
         w.writerow(header)
-        for k in sorted(rows.keys()):
-            w.writerow(rows[k])
+        for kk in sorted(rows.keys()):
+            w.writerow(rows[kk])
     os.replace(tmp, CSV_HIST)
-    return got, len(rows)
+    return got, len(rows), from_k, intraday
+
+
+
+
+def fy_of(report_date):
+    """报告期 → 所属财年。
+
+    6-30 / 9-30 是本财年的中期与三季报；次年 3-31 / 4-30 属于上一财年。
+    原实现直接取报告期年份，会把 FY2026 中期算进 FY2025，导致股息率虚高。
+    """
+    y = int(report_date[:4])
+    mmdd = report_date[5:]
+    if mmdd in ("03-31", "04-30"):
+        return y - 1
+    return y
 
 
 def fetch_dividends(since_year):
@@ -169,11 +250,11 @@ def fetch_dividends(since_year):
             if not r.get("EX_DIVIDEND_DATE"):
                 plan.setdefault(code, []).append((rd, b / 10.0))
                 continue
-            y = int(rd[:4])
+            fy = fy_of(rd)
             acc.setdefault(code, {})
-            acc[code][y] = acc[code].get(y, 0.0) + b / 10.0
+            acc[code][fy] = acc[code].get(fy, 0.0) + b / 10.0
             if rd[5:] == "12-31":
-                ann.setdefault(code, {})[y] = True
+                ann.setdefault(code, {})[fy] = True
         page += 1
         time.sleep(0.25)
     return acc, ann, plan
@@ -296,9 +377,21 @@ def main():
     px = fetch_quotes(pool)
     log("行情抓到 %d 只" % len(px))
 
+    # 优先用日 K 里的真实收盘价：行情快照在收盘前跑会记成盘中价
+    try:
+        closes = fetch_close_kline(pool)
+        log("日K收盘价：取到 %d 只" % len(closes))
+    except Exception as e:
+        log("日K收盘价获取失败，退回行情快照：%s" % e)
+        closes = {}
+
     day = datetime.now().strftime("%Y-%m-%d")
-    got, total = write_history(pool, px, day)
-    log("写入历史：今日 %d 条，累计 %d 条" % (got, total))
+    got, total, from_k, intraday = write_history(pool, px, day, closes)
+    log("写入历史：今日 %d 条（日K收盘 %d 条 / 盘中快照 %d 条），累计 %d 条"
+        % (got, from_k, intraday, total))
+    if intraday:
+        log("  ⚠ 有 %d 条是**盘中价**：收盘后再跑一次会被日K收盘价覆盖。"
+            "若当天只跑这一次，请在 16:30 后补跑。" % intraday)
 
     try:
         bok, bbad = boll_json(pool)
@@ -316,7 +409,8 @@ def main():
         fn = os.path.join(HERE, "分红差异-%s.txt" % datetime.now().strftime("%Y%m%d"))
         with open(fn, "w", encoding="utf-8") as f:
             f.write("红利工作台 · 分红差异报告  %s\n" % datetime.now().strftime("%Y-%m-%d %H:%M"))
-            f.write("口径：最近完整财年各期「每10股派息(含税)」合计 ÷ 10，只计已实施\n")
+            f.write("口径：按财年归集各报告期「每10股派息(含税)」÷ 10，只计已实施\n")
+            f.write("      FY2025 = 2025 中期 + 2025 年报（不含 FY2026 中期）\n")
             f.write("=" * 66 + "\n")
             f.write("%-10s %-8s %10s %10s %8s %10s\n" % ("名称", "代码", "内置值", "公告值", "财年", "偏差"))
             for n, c, old, neu, fy, dev in diffs:
